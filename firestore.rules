@@ -1,0 +1,395 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidHashId(id) {
+      return id is string && id.size() == 64 && id.matches('^[a-f0-9]{64}$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (
+          request.auth.token.email_verified == true &&
+          request.auth.token.email == 'kamleshpatil9719@gmail.com'
+        )
+      );
+    }
+
+    // Validation Blueprints
+    function isValidFollower(data, followerId) {
+      return data.keys().hasAll([
+          'id',
+          'name',
+          'mobile',
+          'consentGiven',
+          'interests',
+          'source',
+          'createdAt',
+          'createdAtIso'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'name',
+          'mobile',
+          'consentGiven',
+          'interests',
+          'source',
+          'createdAt',
+          'createdAtIso'
+        ]) &&
+        data.id is string &&
+        data.id == followerId &&
+        isValidHashId(data.id) &&
+        data.name is string &&
+        data.name.trim().size() >= 2 &&
+        data.name.size() <= 80 &&
+        data.mobile is string &&
+        data.mobile.size() == 10 &&
+        data.mobile.matches('^[6-9][0-9]{9}$') &&
+        data.consentGiven is bool &&
+        data.consentGiven == true &&
+        data.interests is list &&
+        data.interests.size() >= 1 &&
+        data.interests.size() <= 6 &&
+        data.interests[0] is string &&
+        data.interests[0].size() >= 1 &&
+        data.interests[0].size() <= 60 &&
+        data.source is string &&
+        data.source.size() >= 2 &&
+        data.source.size() <= 40 &&
+        data.createdAt is timestamp &&
+        data.createdAtIso is string &&
+        data.createdAtIso.size() >= 10 &&
+        data.createdAtIso.size() <= 40 &&
+        data.createdAtIso.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*');
+    }
+
+    function isValidFollowerHash(data) {
+      return data.keys().hasAll(['createdAt']) &&
+        data.keys().hasOnly(['createdAt']) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidPortalStats(data) {
+      return data.keys().hasAll(['totalFollowers', 'updatedAt']) &&
+        data.keys().hasOnly(['totalFollowers', 'updatedAt']) &&
+        data.totalFollowers is int &&
+        data.totalFollowers >= 0 &&
+        data.totalFollowers <= 10000000 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidLiveUpdate(data, updateId) {
+      return data.keys().hasAll(['id', 'title', 'message', 'targetTab', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'title', 'message', 'targetTab', 'createdAt']) &&
+        data.id is string &&
+        data.id == updateId &&
+        isValidId(data.id) &&
+        data.title is string &&
+        data.title.trim().size() >= 2 &&
+        data.title.size() <= 160 &&
+        data.message is string &&
+        data.message.trim().size() >= 2 &&
+        data.message.size() <= 800 &&
+        data.targetTab is string &&
+        data.targetTab.size() >= 2 &&
+        data.targetTab.size() <= 40 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['email', 'addedAt']) &&
+        data.keys().hasOnly(['email', 'addedAt']) &&
+        data.email is string &&
+        data.email.size() >= 5 &&
+        data.email.size() <= 160 &&
+        data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$') &&
+        data.addedAt is timestamp;
+    }
+
+    function isValidOwnerPoster(data, posterId) {
+      return data.keys().hasAll([
+          'id',
+          'title',
+          'category',
+          'badge',
+          'imageUrl',
+          'dateAdded',
+          'createdAt',
+          'createdAtMs'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'title',
+          'category',
+          'badge',
+          'imageUrl',
+          'dateAdded',
+          'createdAt',
+          'createdAtMs'
+        ]) &&
+        data.id is string &&
+        data.id == posterId &&
+        isValidId(data.id) &&
+        data.title is string &&
+        data.title.trim().size() >= 1 &&
+        data.title.size() <= 140 &&
+        data.category is string &&
+        data.category.trim().size() >= 1 &&
+        data.category.size() <= 60 &&
+        data.badge is string &&
+        data.badge.trim().size() >= 1 &&
+        data.badge.size() <= 40 &&
+        data.imageUrl is string &&
+        data.imageUrl.size() >= 20 &&
+        data.imageUrl.size() <= 950000 &&
+        data.imageUrl.matches('^data:image/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$') &&
+        data.dateAdded is string &&
+        data.dateAdded.trim().size() >= 1 &&
+        data.dateAdded.size() <= 40 &&
+        data.createdAt is timestamp &&
+        data.createdAtMs is int &&
+        data.createdAtMs >= 1700000000000 &&
+        data.createdAtMs <= 9999999999999;
+    }
+
+    function isValidContactMessage(data, messageId) {
+      return data.keys().hasAll([
+          'id',
+          'name',
+          'mobile',
+          'email',
+          'message',
+          'createdAt',
+          'createdAtMs'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'name',
+          'mobile',
+          'email',
+          'message',
+          'createdAt',
+          'createdAtMs'
+        ]) &&
+        data.id is string &&
+        data.id == messageId &&
+        isValidId(data.id) &&
+        data.id.size() >= 6 &&
+        data.name is string &&
+        data.name.trim().size() >= 2 &&
+        data.name.size() <= 80 &&
+        data.mobile is string &&
+        data.mobile.size() == 10 &&
+        data.mobile.matches('^[6-9][0-9]{9}$') &&
+        data.email is string &&
+        data.email.size() >= 5 &&
+        data.email.size() <= 160 &&
+        data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$') &&
+        data.message is string &&
+        data.message.trim().size() >= 5 &&
+        data.message.size() <= 1500 &&
+        data.createdAt is timestamp &&
+        data.createdAtMs is int &&
+        data.createdAtMs >= 1700000000000 &&
+        data.createdAtMs <= 9999999999999;
+    }
+
+    function isValidUserPoster(data, posterId) {
+      return data.keys().hasAll([
+          'id',
+          'ownerUid',
+          'title',
+          'centerName',
+          'category',
+          'imageUrl',
+          'dateSaved',
+          'createdAt',
+          'createdAtMs'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'ownerUid',
+          'title',
+          'centerName',
+          'category',
+          'imageUrl',
+          'dateSaved',
+          'createdAt',
+          'createdAtMs'
+        ]) &&
+        data.id is string &&
+        data.id == posterId &&
+        isValidId(data.id) &&
+        data.id.size() >= 6 &&
+        data.ownerUid is string &&
+        isValidId(data.ownerUid) &&
+        data.ownerUid.size() >= 6 &&
+        data.ownerUid == request.auth.uid &&
+        data.title is string &&
+        data.title.trim().size() >= 1 &&
+        data.title.size() <= 140 &&
+        data.centerName is string &&
+        data.centerName.trim().size() >= 1 &&
+        data.centerName.size() <= 100 &&
+        data.category is string &&
+        data.category.trim().size() >= 1 &&
+        data.category.size() <= 60 &&
+        data.imageUrl is string &&
+        data.imageUrl.size() >= 20 &&
+        data.imageUrl.size() <= 450000 &&
+        data.imageUrl.matches('^data:image/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$') &&
+        data.dateSaved is string &&
+        data.dateSaved.trim().size() >= 1 &&
+        data.dateSaved.size() <= 40 &&
+        data.createdAt is timestamp &&
+        data.createdAtMs is int &&
+        data.createdAtMs >= 1700000000000 &&
+        data.createdAtMs <= 9999999999999;
+    }
+
+    // Collection 1: Followers (PII protected strictly to Admin reads/updates/deletes)
+    match /followers/{followerId} {
+      allow get: if isAdmin() && isValidHashId(followerId);
+      allow list: if isAdmin();
+      allow create: if isValidHashId(followerId) &&
+        isValidFollower(incoming(), followerId) &&
+        incoming().createdAt == request.time &&
+        existsAfter(/databases/$(database)/documents/follower_hashes/$(followerId));
+      allow update: if isAdmin() &&
+        isValidHashId(followerId) &&
+        isValidFollower(incoming(), followerId) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'interests']);
+      allow delete: if isAdmin() && isValidHashId(followerId);
+    }
+
+    // Collection 2: Zero-PII Duplicate Prevention Index
+    match /follower_hashes/{hashId} {
+      allow get: if isValidHashId(hashId);
+      allow list: if false;
+      allow create: if isValidHashId(hashId) &&
+        isValidFollowerHash(incoming()) &&
+        incoming().createdAt == request.time &&
+        existsAfter(/databases/$(database)/documents/followers/$(hashId));
+      allow update: if false;
+      allow delete: if isAdmin() && isValidHashId(hashId);
+    }
+
+    // Collection 3: Public Aggregate Follower Counter (Zero PII)
+    match /portal_stats/{statId} {
+      allow get: if statId == 'summary';
+      allow list: if false;
+      allow create: if statId == 'summary' &&
+        isValidPortalStats(incoming()) &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || incoming().totalFollowers == 1);
+      allow update: if statId == 'summary' &&
+        isValidPortalStats(incoming()) &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['totalFollowers', 'updatedAt']) &&
+        (isAdmin() || incoming().totalFollowers == existing().totalFollowers + 1);
+      allow delete: if false;
+    }
+
+    // Collection 4: Admin Live Announcements (Non-PII)
+    match /live_updates/{updateId} {
+      allow get: if isValidId(updateId);
+      allow list: if request.query.limit <= 50;
+      allow create: if isAdmin() &&
+        isValidId(updateId) &&
+        isValidLiveUpdate(incoming(), updateId) &&
+        incoming().createdAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(updateId) &&
+        isValidLiveUpdate(incoming(), updateId) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'message', 'targetTab']);
+      allow delete: if isAdmin() && isValidId(updateId);
+    }
+
+    // Collection 5: Trusted Admins
+    match /admins/{adminUid} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin() &&
+        isValidId(adminUid) &&
+        isValidAdminUser(incoming()) &&
+        incoming().addedAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(adminUid);
+    }
+
+    // Collection 6: Persistent Official Owner Posters (Zero PII public gallery)
+    match /owner_posters/{posterId} {
+      allow get: if isValidId(posterId);
+      allow list: if request.query.limit <= 100;
+      allow create: if isAdmin() &&
+        isValidId(posterId) &&
+        isValidOwnerPoster(incoming(), posterId) &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(posterId);
+    }
+
+    // Collection 7: Citizen Contact / Support Messages (PII protected strictly to Admin)
+    match /contact_messages/{messageId} {
+      allow get: if isAdmin() && isValidId(messageId);
+      allow list: if isAdmin();
+      allow create: if isValidId(messageId) &&
+        isValidContactMessage(incoming(), messageId) &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(messageId);
+    }
+
+    // Collection 8: My Posters (User-owned generated posters; no automatic deletion, owner-only CRUD)
+    match /user_posters/{posterId} {
+      allow get: if isSignedIn() &&
+        isValidId(posterId) &&
+        (existing().ownerUid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() &&
+        existing().ownerUid == request.auth.uid &&
+        request.query.limit <= 50;
+      allow create: if isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        isValidId(posterId) &&
+        isValidUserPoster(incoming(), posterId) &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isSignedIn() &&
+        isValidId(posterId) &&
+        (existing().ownerUid == request.auth.uid || isAdmin());
+    }
+
+    // Connection Check Document
+    match /test/{docId} {
+      allow get: if docId == 'connection';
+      allow list, write: if false;
+    }
+  }
+}

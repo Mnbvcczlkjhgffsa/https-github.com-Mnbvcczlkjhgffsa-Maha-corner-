@@ -1,0 +1,6 @@
+{
+  "name": "महा कॉर्नर (Maha Corner) - पोस्टर मेकर व शेतकरी ओळखपत्र",
+  "description": "महा कॉर्नर - मराठी पोस्टर स्टुडिओ, सरकारी योजना, शेतकरी ओळखपत्र, स्मार्ट PDF टूल्स बार (२०+ टूल्स), नोकरी भरती व कार्ड कटर पोर्टल.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

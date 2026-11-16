@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://maha-corner.ai.studio/sitemap.xml
