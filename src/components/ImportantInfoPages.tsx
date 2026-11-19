@@ -348,6 +348,23 @@ export const ImportantInfoPages: React.FC<ImportantInfoPagesProps> = ({
                 </div>
               </div>
 
+              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200">
+                <Globe className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block">
+                    Official Domain
+                  </span>
+                  <a
+                    href="https://mahacorner.in"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-black text-slate-900 hover:text-amber-700 underline font-mono"
+                  >
+                    mahacorner.in
+                  </a>
+                </div>
+              </div>
+
               <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
                 <UserCheck className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
                 <div>

@@ -1,6 +1,9 @@
 export type AppTab =
   | 'ai-poster'
+  | 'maha-news'
+  | 'vip-posters'
   | 'cutter'
+  | 'bulk-card'
   | 'farmer-card'
   | 'pmfby-calc'
   | 'photo-resizer'
@@ -8,6 +11,7 @@ export type AppTab =
   | 'gr'
   | 'jobs'
   | 'portals'
+  | 'store'
   | 'about'
   | 'privacy'
   | 'terms'
@@ -115,4 +119,64 @@ export interface SavedTemplate {
   name: string;
   date: string;
   config: PosterConfig;
+}
+
+export type BulkCardLayout = 'a4-5cards' | 'a4-10cards' | 'epson-tray' | '4x6-2cards';
+
+export interface BulkCardItem {
+  id: string;
+  name: string;
+  cardType: 'aadhaar' | 'ayushman' | 'farmer' | 'voter' | 'labour' | 'custom';
+  frontCanvas: HTMLCanvasElement | null;
+  backCanvas: HTMLCanvasElement | null;
+  frontThumbnail: string;
+  backThumbnail: string;
+  rotationFront: number; // 0, 90, 180, 270
+  rotationBack: number;
+  brightness: number; // -50 to 50
+  contrast: number; // -50 to 50
+  selected: boolean;
+}
+
+export interface BulkCardConfig {
+  layout: BulkCardLayout;
+  showCutMarks: boolean;
+  showFoldingLine: boolean;
+  showCornerRadius: boolean;
+  foldingGapMm: number; // 0, 1, 2, 3 mm
+  exportDpi: number; // 200 or 300
+  outerBorderWidth: number; // 0.2 to 1 pt
+  alignMode: 'center' | 'top';
+  paperSize: 'a4' | '4x6';
+}
+
+export interface VipPosterItem {
+  id: string;
+  packId: string;
+  titleMr: string;
+  categoryMr: string;
+  descMr: string;
+  badgeMr: string;
+  bgGradient: [string, string];
+  accentColor: string;
+  previewThumbnail?: string;
+  templateData: Partial<AiPosterData>;
+}
+
+export interface VipPosterPack {
+  id: string;
+  nameMr: string;
+  nameEn: string;
+  taglineMr: string;
+  price: number;
+  originalPrice: number;
+  discountBadge: string;
+  icon: string;
+  color: string;
+  accentBorder: string;
+  features: string[];
+  popular?: boolean;
+  validityDays?: number; // e.g. 30 for monthly, undefined for lifetime
+  billingType?: 'monthly' | 'lifetime' | 'pack';
+  posters: VipPosterItem[];
 }

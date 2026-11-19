@@ -1605,10 +1605,13 @@ export const FarmerCardMaker: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleShareCard}
-                  className="py-2 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                  className="py-2 px-3 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs transition-all hover:scale-105 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                 >
-                  <Share2 className="w-3.5 h-3.5 text-emerald-200" />
-                  {t('WhatsApp वर शेअर', 'Share on WhatsApp')}
+                  <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
+                    <path d="M20.1 11.7c0 4.6-3.7 8.3-8.3 8.3-1.3 0-2.5-.3-3.6-.8l-4.7 1.2 1.3-4.5c-.7-1.2-1.1-2.6-1.1-4.2 0-4.6 3.7-8.3 8.3-8.3 4.5 0 8.1 3.7 8.1 8.3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                    <path d="M8.3 7.9c-.3 0-.7.1-.8.5-.2.3-.7 1.1-.7 1.7s.6 1.3.7 1.5c.1.2 1.6 2.5 3.9 3.4 1.9.8 2.3.7 2.7.7.4-.1 1.3-.5 1.5-1.1.2-.5.2-1 .2-1.1 0-.1-.2-.2-.5-.4l-1.5-.7c-.3-.2-.5-.2-.7.2l-.7.8c-.2.2-.3.3-.6.1-.3-.1-1.1-.4-2-1.3-.7-.6-1.2-1.4-1.3-1.6-.1-.3 0-.4.1-.5l.5-.6c.2-.2.2-.4.3-.5.1-.2 0-.4 0-.5l-.7-1.6c-.1-.3-.3-.4-.5-.4Z" fill="white" />
+                  </svg>
+                  <span>{t('📲 WhatsApp शेअर', 'Share on WhatsApp')}</span>
                 </button>
               </div>
             </div>

@@ -40,6 +40,7 @@ import { fetchOwnerAnalytics, LockedAnalyticsStats } from '../utils/analytics';
 import { MAHA_CORNER_URL } from '../utils/shareConfig';
 import { inspectUploadedFileBytes, PDF_SECURITY_LIMITS } from '../utils/pdfSecurity';
 import { FollowersAdminDashboard } from './FollowersAdminDashboard';
+import { OurTeam } from './OurTeam';
 
 const DEFAULT_FOUNDER_PHOTO = '/assets/aistudio/Gemini_Generated_Image_nqyhzinqyhzinqyh_48a1cff1.png';
 
@@ -395,6 +396,15 @@ export const AboutFounder: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 🚀 MAHA CORNER – Our Team Component (Directly Below Founder Photo & Profile Banner) */}
+      <OurTeam
+        unlockedPin={unlockedPin}
+        onRequireUnlock={() => {
+          setAnalyticsError('');
+          setShowPhotoUnlockModal(true);
+        }}
+      />
 
       {/* 4 Professional Impact & Credential Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

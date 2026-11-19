@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://maha-corner.ai.studio/sitemap.xml
+
+Sitemap: https://mahacorner.in/sitemap.xml

@@ -16,7 +16,9 @@ import {
   SlidersHorizontal,
   X,
   Mail,
-  KeyRound
+  KeyRound,
+  Cloud,
+  AlertCircle
 } from 'lucide-react';
 import {
   auth,
@@ -26,6 +28,7 @@ import {
 import {
   FirebaseFollowerRecord,
   subscribeAdminFollowers,
+  fetchAdminFollowersOnce,
   deleteFollowerAsAdmin,
   exportFollowersToExcel,
   syncAdminTotalCounter
@@ -40,10 +43,12 @@ import { MAHA_CORNER_URL } from '../utils/shareConfig';
 
 interface FollowersAdminDashboardProps {
   onFollowerCountSync?: (count: number) => void;
+  publicFollowerCount?: number;
 }
 
 export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = ({
   onFollowerCountSync,
+  publicFollowerCount = 0,
 }) => {
   const { lang, t } = useLanguage();
 
@@ -66,6 +71,7 @@ export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = (
   const [firestoreMessages, setFirestoreMessages] = useState<FirebaseContactRecord[]>([]);
   const [serverMessages, setServerMessages] = useState<FirebaseContactRecord[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(false);
+  const [loadingCloud, setLoadingCloud] = useState<boolean>(false);
   const [dataError, setDataError] = useState<string>('');
 
   // Search, Date & Sort Filters
@@ -90,12 +96,22 @@ export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = (
 
   const followers = useMemo<FirebaseFollowerRecord[]>(() => {
     const byMobile = new Map<string, FirebaseFollowerRecord>();
-    for (const s of serverFollowers) {
-      byMobile.set(s.mobile || s.id, s);
-    }
+    const isGenericName = (n: string) =>
+      !n || !n.trim() || n.trim() === 'नियमित ग्राहक' || n.trim() === 'नाव नोंदवलेले नाही';
+
+    // Load Cloud records first (persistent source of truth)
     for (const f of firestoreFollowers) {
-      if (!byMobile.has(f.mobile || f.id)) {
-        byMobile.set(f.mobile || f.id, f);
+      const key = f.mobile || f.id;
+      byMobile.set(key, f);
+    }
+    // Merge Server records without overwriting a real Cloud name with a generic fallback
+    for (const s of serverFollowers) {
+      const key = s.mobile || s.id;
+      const existing = byMobile.get(key);
+      if (!existing) {
+        byMobile.set(key, s);
+      } else if (isGenericName(existing.name) && !isGenericName(s.name)) {
+        byMobile.set(key, { ...existing, name: s.name });
       }
     }
     return Array.from(byMobile.values()).sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
@@ -214,25 +230,62 @@ export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = (
     }
   }, [verifiedPin, loadServerAdminLists]);
 
+  const refreshCloudFollowersOnce = useCallback(async () => {
+    if (!isAuthorizedAdmin) return;
+    setLoadingCloud(true);
+    setDataError('');
+    try {
+      const records = await fetchAdminFollowersOnce();
+      setFirestoreFollowers(records);
+      const bestTotal = Math.max(records.length, serverFollowers.length, legacyFollowerCount);
+      if (onFollowerCountSync && bestTotal > 0) {
+        onFollowerCountSync(bestTotal);
+      }
+    } catch (err: any) {
+      console.error('Cloud followers fetch error:', err);
+      setDataError(
+        t(
+          'Firebase Cloud मधून फॉलोअर्स नावे लोड करताना अडचण आली. कृपया इंटरनेट तपासा किंवा पुन्हा प्रयत्न करा.',
+          'Failed to load followers from Firebase Cloud. Please check connection and retry.'
+        )
+      );
+    } finally {
+      setLoadingCloud(false);
+    }
+  }, [isAuthorizedAdmin, serverFollowers.length, legacyFollowerCount, onFollowerCountSync, t]);
+
   useEffect(() => {
     if (!authReady || !isAuthorizedAdmin) {
       setFirestoreFollowers([]);
       setFirestoreMessages([]);
+      setLoadingCloud(false);
       return;
     }
 
     setDataError('');
+    setLoadingCloud(true);
     const unsubFollowers = subscribeAdminFollowers(
       (records) => {
         setFirestoreFollowers(records);
+        setLoadingCloud(false);
+        setDataError('');
         const bestTotal = Math.max(records.length, serverFollowers.length, legacyFollowerCount);
-        if (onFollowerCountSync) {
+        if (onFollowerCountSync && bestTotal > 0) {
           onFollowerCountSync(bestTotal);
         }
-        void syncAdminTotalCounter(bestTotal).catch(() => {});
+        if (bestTotal > 0) {
+          void syncAdminTotalCounter(bestTotal).catch(() => {});
+        }
       },
-      () => {
-        // Silently degrade to zero-quota Server lists if Firestore quota is exceeded
+      (err) => {
+        setLoadingCloud(false);
+        console.error('Firestore followers subscription error:', err);
+        setDataError(
+          t(
+            'Firebase Cloud मधून फॉलोअर्स यादी वाचताना त्रुटी आली. कृपया "रिफ्रेश करा" बटण दाबा किंवा पुन्हा Google Admin लॉगिन करा.',
+            'Could not read followers from Firebase Cloud. Click Refresh or sign in again as Admin.'
+          )
+        );
       }
     );
 
@@ -247,7 +300,7 @@ export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = (
       unsubFollowers();
       unsubContacts();
     };
-  }, [authReady, isAuthorizedAdmin, onFollowerCountSync, serverFollowers.length, legacyFollowerCount]);
+  }, [authReady, isAuthorizedAdmin, onFollowerCountSync, serverFollowers.length, legacyFollowerCount, t]);
 
   const handleVerifyOwnerPin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -339,13 +392,13 @@ export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = (
     }
 
     return {
-      total: Math.max(followers.length, legacyFollowerCount),
+      total: Math.max(followers.length, legacyFollowerCount, publicFollowerCount),
       registeredTotal: followers.length,
       todayCount,
       weekCount,
       consentCount,
     };
-  }, [followers, legacyFollowerCount, todayIso]);
+  }, [followers, legacyFollowerCount, publicFollowerCount, todayIso]);
 
   const filteredFollowers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -467,16 +520,46 @@ export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = (
           </h3>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
             {t(
-              'फॉलोअर्स यादी आणि संपर्क संदेश पाहण्यासाठी खालील Owner PIN टाका किंवा Google Admin खात्याने लॉगिन करा.',
-              'Unlock with Owner PIN (zero quota) or sign in with Google Admin to manage followers and contact messages.'
+              'सर्व फॉलो केलेल्या लोकांची नावे व मोबाईल नंबर (Firebase Cloud) पाहण्यासाठी Google Admin खात्याने लॉगिन करा किंवा खालील Owner PIN टाका.',
+              'Sign in with Google Admin to load all persistent Cloud follower names & numbers, or unlock local list with Owner PIN.'
             )}
           </p>
         </div>
 
+        {/* Primary Recommended Action: Google Admin Sign-In for Cloud Followers */}
+        <div className="bg-emerald-500/10 border border-emerald-400/40 p-4 rounded-2xl space-y-2.5 text-left">
+          <div className="text-xs font-extrabold text-emerald-300 flex items-center gap-1.5">
+            <Cloud className="w-4 h-4 shrink-0" />
+            <span>{t('शिफारस केलेले: Google Admin लॉगिन (सर्व Cloud फॉलोअर्स नावे)', 'Recommended: Google Admin Sign-In (All Cloud Followers)')}</span>
+          </div>
+          <button
+            type="button"
+            disabled={signingIn}
+            onClick={handleGoogleAdminSignIn}
+            className="w-full px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer disabled:opacity-60 transition-all"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>
+              {signingIn
+                ? t('लॉगिन होत आहे...', 'Signing in...')
+                : t('Sign in with Google Admin (क्लाउड नावे पहा)', 'Sign in with Google Admin (View Cloud Names)')}
+            </span>
+          </button>
+          <p className="text-[11px] text-slate-300">
+            {t(`अधिकृत Admin ईमेल: ${ADMIN_EMAIL}`, `Authorized Admin Email: ${ADMIN_EMAIL}`)}
+          </p>
+        </div>
+
+        {authError && (
+          <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-200 text-xs font-bold text-left">
+            {authError}
+          </div>
+        )}
+
         <form onSubmit={handleVerifyOwnerPin} className="space-y-2.5 text-left bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
           <label className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
             <KeyRound className="w-3.5 h-3.5" />
-            <span>{t('Owner PIN ने तात्काळ अनलॉक करा (० कोटा खर्च):', 'Unlock with Owner PIN (Zero Quota):')}</span>
+            <span>{t('किंवा Owner PIN ने अनलॉक करा (फक्त सर्व्हर यादी):', 'Or Unlock with Owner PIN (Server List Only):')}</span>
           </label>
           <div className="flex gap-2">
             <input
@@ -501,38 +584,16 @@ export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = (
           {pinError && <p className="text-xs font-bold text-rose-400">{pinError}</p>}
         </form>
 
-        {authError && (
-          <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-200 text-xs font-bold text-left">
-            {authError}
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-1">
+        {currentUser && (
           <button
             type="button"
-            disabled={signingIn}
-            onClick={handleGoogleAdminSignIn}
-            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-60"
+            onClick={handleAdminSignOut}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs inline-flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>
-              {signingIn
-                ? t('लॉगिन होत आहे...', 'Signing in...')
-                : t('किंवा Sign in with Google Admin', 'Or Sign in with Google Admin')}
-            </span>
+            <LogOut className="w-4 h-4" />
+            <span>{t('साइन आउट', 'Sign Out')}</span>
           </button>
-
-          {currentUser && (
-            <button
-              type="button"
-              onClick={handleAdminSignOut}
-              className="w-full sm:w-auto px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>{t('साइन आउट', 'Sign Out')}</span>
-            </button>
-          )}
-        </div>
+        )}
       </div>
     );
   }
@@ -551,25 +612,26 @@ export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = (
               {t('Admin Dashboard (Followers & Messages)', 'Admin Dashboard (Followers & Messages)')}
             </h3>
             <p className="text-xs text-emerald-300 truncate">
-              ✓ {verifiedPin ? t('Owner PIN प्रमाणित', 'Owner PIN Unlocked') : ''}{' '}
-              {currentUser?.email ? `• ${currentUser.email}` : ''}
+              {isAuthorizedAdmin ? t('☁️ Firebase Cloud Admin जोडलेले आहे', '☁️ Firebase Cloud Admin Connected') : t('🔑 Owner PIN प्रमाणित (फक्त सर्व्हर)', '🔑 Owner PIN Unlocked (Server Only)')}
+              {currentUser?.email ? ` • ${currentUser.email}` : ''}
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {verifiedPin && (
-            <button
-              type="button"
-              disabled={loadingData}
-              onClick={() => void loadServerAdminLists(verifiedPin)}
-              className="px-3.5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-60 text-white font-black text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
-              title={t('ताजी यादी रिफ्रेश करा', 'Refresh Followers & Messages')}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin' : ''}`} />
-              <span>{t('रिफ्रेश करा', 'Refresh')}</span>
-            </button>
-          )}
+          <button
+            type="button"
+            disabled={loadingData || loadingCloud}
+            onClick={() => {
+              if (verifiedPin) void loadServerAdminLists(verifiedPin);
+              if (isAuthorizedAdmin) void refreshCloudFollowersOnce();
+            }}
+            className="px-3.5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-60 text-white font-black text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
+            title={t('ताजी यादी रिफ्रेश करा', 'Refresh Followers & Messages')}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingData || loadingCloud ? 'animate-spin' : ''}`} />
+            <span>{t('रिफ्रेश करा', 'Refresh')}</span>
+          </button>
 
           {adminSection === 'followers' && (
             <button
@@ -593,6 +655,50 @@ export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = (
           </button>
         </div>
       </div>
+
+      {/* Prominent Cloud Sync Prompt when unlocked via PIN only */}
+      {!isAuthorizedAdmin && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 shadow-xs space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <Cloud className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <div className="text-xs sm:text-sm font-black text-slate-900">
+                  {t(
+                    'फॉलो केलेल्या लोकांची नावे दिसत नाहीत का? (Cloud Sync आवश्यक)',
+                    'Follower names not showing? Connect Google Admin Cloud Sync'
+                  )}
+                </div>
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  {t(
+                    `सध्या फक्त सर्व्हरवरील तात्पुरती यादी दिसत आहे. Firebase Cloud मध्ये सेव्ह झालेली सर्व फॉलोअर्सची नावे व मोबाईल नंबर लोड करण्यासाठी अधिकृत Admin ईमेल (${ADMIN_EMAIL}) ने १-क्लिक लॉगिन करा.`,
+                    `PIN unlock only shows temporary server records. Sign in with authorized Admin Google account (${ADMIN_EMAIL}) to load all persistent Cloud follower names & numbers.`
+                  )}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={signingIn}
+              onClick={handleGoogleAdminSignIn}
+              className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 font-black text-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer shadow-md disabled:opacity-60"
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>
+                {signingIn
+                  ? t('कनेक्ट होत आहे...', 'Connecting...')
+                  : t('☁️ Google Admin लॉगिन (नावे लोड करा)', '☁️ Google Admin Sign-In (Load Names)')}
+              </span>
+            </button>
+          </div>
+          {authError && (
+            <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{authError}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Section Switcher: Followers vs Contact Messages */}
       <div className="flex flex-wrap items-center gap-2">
@@ -721,14 +827,12 @@ export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = (
             <span>{t('एकूण फॉलोअर्स', 'Total Followers')}</span>
           </div>
           <div className="text-2xl font-black text-slate-900 mt-1 tabular-nums">{stats.total}</div>
-          {(browserFollowers > 0 || legacyFollowerCount > stats.registeredTotal) && (
-            <div className="text-[10px] font-bold text-slate-500 mt-0.5 tabular-nums">
-              {t(
-                `नोंदणी यादी: ${stats.registeredTotal}${browserFollowers > 0 ? ` • ब्राउझर फॉलो: ${browserFollowers}` : ''}`,
-                `List: ${stats.registeredTotal}${browserFollowers > 0 ? ` • Browser: ${browserFollowers}` : ''}`
-              )}
-            </div>
-          )}
+          <div className="text-[10px] font-bold text-slate-500 mt-0.5 tabular-nums">
+            {t(
+              `नावे लोड: ${stats.registeredTotal} (☁️ ${firestoreFollowers.length} • 🖥️ ${serverFollowers.length})${browserFollowers > 0 ? ` • ब्राउझर: ${browserFollowers}` : ''}`,
+              `Loaded Names: ${stats.registeredTotal} (☁️ ${firestoreFollowers.length} • 🖥️ ${serverFollowers.length})${browserFollowers > 0 ? ` • Browser: ${browserFollowers}` : ''}`
+            )}
+          </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
@@ -854,25 +958,53 @@ export const FollowersAdminDashboard: React.FC<FollowersAdminDashboardProps> = (
       </div>
 
       {dataError && (
-        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-xs font-bold text-rose-800">
-          {dataError}
+        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-xs font-bold text-rose-800 flex flex-wrap items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{dataError}</span>
+          </span>
+          {isAuthorizedAdmin && (
+            <button
+              type="button"
+              onClick={() => void refreshCloudFollowersOnce()}
+              className="px-3 py-1 rounded-lg bg-rose-600 text-white font-black text-[11px] cursor-pointer"
+            >
+              {t('पुन्हा प्रयत्न करा', 'Retry')}
+            </button>
+          )}
         </div>
       )}
 
       {/* Loading / Empty / List */}
-      {loadingData ? (
+      {loadingData || loadingCloud ? (
         <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center text-xs font-bold text-slate-500 flex items-center justify-center gap-2">
           <RefreshCw className="w-4 h-4 animate-spin text-amber-600" />
-          <span>{t('Firebase Firestore मधून फॉलोअर्स लोड होत आहेत...', 'Loading followers from Firestore...')}</span>
+          <span>{t('फॉलोअर्सची नावे व माहिती लोड होत आहे...', 'Loading follower names & details...')}</span>
         </div>
       ) : filteredFollowers.length === 0 ? (
-        <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-2">
+        <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-3">
           <Users className="w-8 h-8 text-slate-300 mx-auto" />
-          <p className="text-xs sm:text-sm font-bold text-slate-600">
+          <p className="text-xs sm:text-sm font-bold text-slate-700">
             {followers.length === 0
-              ? t('अजून कोणीही फॉलोअर नोंदणी केलेली नाही.', 'No followers have registered in Firestore yet.')
+              ? !isAuthorizedAdmin
+                ? t(
+                    'सर्व्हरवर सध्या ० तात्पुरत्या नोंदी आहेत. Firebase Cloud मधील फॉलोअर्सची नावे पाहण्यासाठी Google Admin लॉगिन करा.',
+                    '0 temporary server records right now. Sign in with Google Admin to load persistent Cloud follower names.'
+                  )
+                : t('अजून कोणीही नाव व मोबाईल नंबर टाकून फॉलो नोंदणी केलेली नाही.', 'No followers have registered with name & mobile yet.')
               : t('निवडलेल्या शोधात किंवा तारखेत कोणताही फॉलोअर आढळला नाही.', 'No followers match your current search/date filter.')}
           </p>
+          {followers.length === 0 && !isAuthorizedAdmin && (
+            <button
+              type="button"
+              disabled={signingIn}
+              onClick={handleGoogleAdminSignIn}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black cursor-pointer shadow-md"
+            >
+              <Cloud className="w-4 h-4" />
+              <span>{t('☁️ Google Admin लॉगिन करून क्लाउड नावे लोड करा', '☁️ Sign in with Google Admin to Load Cloud Names')}</span>
+            </button>
+          )}
         </div>
       ) : (
         <>

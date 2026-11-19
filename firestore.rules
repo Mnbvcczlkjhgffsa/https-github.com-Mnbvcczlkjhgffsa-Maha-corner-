@@ -271,6 +271,130 @@ service cloud.firestore {
         data.createdAtMs <= 9999999999999;
     }
 
+    function isValidVipOrder(data, orderId) {
+      return data.keys().hasAll([
+          'id',
+          'packId',
+          'packNameMr',
+          'amount',
+          'customerName',
+          'customerMobile',
+          'utrNumber',
+          'paymentMethod',
+          'status',
+          'expiresAtIso',
+          'createdAt',
+          'createdAtIso',
+          'createdAtMs'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'packId',
+          'packNameMr',
+          'amount',
+          'customerName',
+          'customerMobile',
+          'utrNumber',
+          'paymentMethod',
+          'status',
+          'expiresAtIso',
+          'createdAt',
+          'createdAtIso',
+          'createdAtMs'
+        ]) &&
+        data.id is string &&
+        data.id == orderId &&
+        isValidId(data.id) &&
+        data.id.size() >= 6 &&
+        data.packId is string &&
+        isValidId(data.packId) &&
+        data.packId.size() >= 2 &&
+        data.packId.size() <= 40 &&
+        data.packNameMr is string &&
+        data.packNameMr.trim().size() >= 2 &&
+        data.packNameMr.size() <= 120 &&
+        data.amount is int &&
+        data.amount >= 1 &&
+        data.amount <= 50000 &&
+        data.customerName is string &&
+        data.customerName.trim().size() >= 2 &&
+        data.customerName.size() <= 80 &&
+        data.customerMobile is string &&
+        data.customerMobile.size() == 10 &&
+        data.customerMobile.matches('^[6-9][0-9]{9}$') &&
+        data.utrNumber is string &&
+        data.utrNumber.size() >= 6 &&
+        data.utrNumber.size() <= 40 &&
+        data.utrNumber.matches('^[A-Za-z0-9\\-_]{6,40}$') &&
+        data.paymentMethod is string &&
+        data.paymentMethod in ['UPI', 'PROMO'] &&
+        data.status is string &&
+        data.status in ['verified', 'pending'] &&
+        data.expiresAtIso is string &&
+        data.expiresAtIso.size() <= 40 &&
+        data.createdAt is timestamp &&
+        data.createdAtIso is string &&
+        data.createdAtIso.size() >= 10 &&
+        data.createdAtIso.size() <= 40 &&
+        data.createdAtIso.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*') &&
+        data.createdAtMs is int &&
+        data.createdAtMs >= 1700000000000 &&
+        data.createdAtMs <= 9999999999999;
+    }
+
+    function isValidSiteAd(data, adId) {
+      return data.keys().hasAll([
+          'id',
+          'title',
+          'description',
+          'marqueeText',
+          'imageUrl',
+          'linkUrl',
+          'contactPhone',
+          'active',
+          'createdAt',
+          'createdAtMs'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'title',
+          'description',
+          'marqueeText',
+          'imageUrl',
+          'linkUrl',
+          'contactPhone',
+          'active',
+          'createdAt',
+          'createdAtMs'
+        ]) &&
+        data.id is string &&
+        data.id == adId &&
+        isValidId(data.id) &&
+        data.id.size() >= 3 &&
+        data.title is string &&
+        data.title.trim().size() >= 1 &&
+        data.title.size() <= 140 &&
+        data.description is string &&
+        data.description.trim().size() >= 1 &&
+        data.description.size() <= 500 &&
+        data.marqueeText is string &&
+        data.marqueeText.size() <= 600 &&
+        data.imageUrl is string &&
+        data.imageUrl.size() >= 20 &&
+        data.imageUrl.size() <= 950000 &&
+        data.imageUrl.matches('^data:image/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$') &&
+        data.linkUrl is string &&
+        data.linkUrl.size() <= 300 &&
+        (data.linkUrl == '' || data.linkUrl.matches('^https?://.*')) &&
+        data.contactPhone is string &&
+        data.contactPhone.size() <= 20 &&
+        data.active is bool &&
+        data.createdAt is timestamp &&
+        data.createdAtMs is int &&
+        data.createdAtMs >= 1700000000000 &&
+        data.createdAtMs <= 9999999999999;
+    }
+
     // Collection 1: Followers (PII protected strictly to Admin reads/updates/deletes)
     match /followers/{followerId} {
       allow get: if isAdmin() && isValidHashId(followerId);
@@ -384,6 +508,39 @@ service cloud.firestore {
       allow delete: if isSignedIn() &&
         isValidId(posterId) &&
         (existing().ownerUid == request.auth.uid || isAdmin());
+    }
+
+    // Collection 9: VIP Poster Payment Orders (PII protected strictly to Admin reads/updates/deletes)
+    match /vip_orders/{orderId} {
+      allow get: if isAdmin() && isValidId(orderId);
+      allow list: if isAdmin();
+      allow create: if isValidId(orderId) &&
+        isValidVipOrder(incoming(), orderId) &&
+        incoming().createdAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(orderId) &&
+        isValidVipOrder(incoming(), orderId) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+      allow delete: if isAdmin() && isValidId(orderId);
+    }
+
+    // Collection 10: Owner-Uploaded Portal Advertisements (Public zero-PII read; Admin-only write/update/delete)
+    match /site_ads/{adId} {
+      allow get: if isValidId(adId);
+      allow list: if request.query.limit <= 30;
+      allow create: if isAdmin() &&
+        isValidId(adId) &&
+        isValidSiteAd(incoming(), adId) &&
+        incoming().createdAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(adId) &&
+        isValidSiteAd(incoming(), adId) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['active', 'title', 'description', 'marqueeText', 'linkUrl', 'contactPhone']);
+      allow delete: if isAdmin() && isValidId(adId);
     }
 
     // Connection Check Document

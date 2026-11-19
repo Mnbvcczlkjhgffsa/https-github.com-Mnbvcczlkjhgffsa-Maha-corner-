@@ -5,8 +5,6 @@ import {
   getDocs,
   increment,
   onSnapshot,
-  orderBy,
-  query,
   serverTimestamp,
   setDoc,
   Timestamp,
@@ -142,17 +140,8 @@ export async function registerFollowerInFirestore(
     if (existingHashSnap.exists()) {
       firestoreDuplicate = true;
     } else {
-      const summaryRef = doc(db, 'portal_stats', 'summary');
-      let summaryExists = false;
-      try {
-        const summarySnap = await getDoc(summaryRef);
-        summaryExists = summarySnap.exists();
-        if (summaryExists) {
-          currentTotal = Number(summarySnap.data()?.totalFollowers) || 0;
-        }
-      } catch {}
-
       const nowIso = new Date().toISOString();
+      // Commit follower + hash index atomically first so a stats counter race never blocks saving the follower's name
       const batch = writeBatch(db);
       batch.set(hashDocRef, { createdAt: serverTimestamp() });
       batch.set(doc(db, 'followers', hashId), {
@@ -165,23 +154,35 @@ export async function registerFollowerInFirestore(
         createdAt: serverTimestamp(),
         createdAtIso: nowIso,
       });
-
-      if (summaryExists) {
-        batch.update(summaryRef, {
-          totalFollowers: increment(1),
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        batch.set(summaryRef, {
-          totalFollowers: 1,
-          updatedAt: serverTimestamp(),
-        });
-      }
       await batch.commit();
       firestoreSaved = true;
+
+      // Update aggregate public counter independently (best-effort)
+      try {
+        const summaryRef = doc(db, 'portal_stats', 'summary');
+        const summarySnap = await getDoc(summaryRef);
+        if (summarySnap.exists()) {
+          currentTotal = Number(summarySnap.data()?.totalFollowers) || 0;
+          await setDoc(
+            summaryRef,
+            {
+              totalFollowers: increment(1),
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        } else {
+          await setDoc(summaryRef, {
+            totalFollowers: 1,
+            updatedAt: serverTimestamp(),
+          });
+        }
+      } catch {
+        // Counter increment is non-fatal; follower record is already safely saved
+      }
     }
-  } catch {
-    // Non-fatal when Firestore quota is exhausted or DB is unavailable
+  } catch (err) {
+    console.warn('Firestore follower mirror warning:', err);
   }
 
   if (serverDuplicate || firestoreDuplicate) {
@@ -307,23 +308,35 @@ export function subscribePublicFollowerCount(
 }
 
 function mapFollowerDoc(id: string, data: Record<string, any>): FirebaseFollowerRecord {
-  const ts = data.createdAt instanceof Timestamp ? data.createdAt.toMillis() : Date.parse(data.createdAtIso || '') || Date.now();
+  const rawTs =
+    data.createdAt instanceof Timestamp
+      ? data.createdAt.toMillis()
+      : typeof data.createdAtMs === 'number' && Number.isFinite(data.createdAtMs)
+        ? data.createdAtMs
+        : Date.parse(String(data.createdAtIso || data.subscribedAt || '')) || Date.now();
+
   const iso =
     data.createdAt instanceof Timestamp
       ? data.createdAt.toDate().toISOString()
       : typeof data.createdAtIso === 'string' && data.createdAtIso
         ? data.createdAtIso
-        : new Date(ts).toISOString();
+        : typeof data.subscribedAt === 'string' && data.subscribedAt
+          ? data.subscribedAt
+          : new Date(rawTs).toISOString();
+
+  const resolvedName = String(
+    data.name || data.fullName || data.centerName || data.userName || ''
+  ).trim();
 
   return {
     id,
-    name: String(data.name || ''),
-    mobile: String(data.mobile || ''),
-    consentGiven: Boolean(data.consentGiven),
+    name: resolvedName || 'नाव नोंदवलेले नाही',
+    mobile: String(data.mobile || data.phone || '').trim(),
+    consentGiven: data.consentGiven !== false,
     interests: Array.isArray(data.interests) ? data.interests.map(String) : [],
-    source: String(data.source || 'web'),
+    source: String(data.source || 'firebase-cloud'),
     createdAtIso: iso,
-    createdAtMs: ts,
+    createdAtMs: rawTs,
   };
 }
 
@@ -331,11 +344,14 @@ export function subscribeAdminFollowers(
   onData: (records: FirebaseFollowerRecord[]) => void,
   onError?: (err: Error) => void
 ): Unsubscribe {
-  const q = query(collection(db, 'followers'), orderBy('createdAt', 'desc'));
+  // Query full collection without orderBy('createdAt') so legacy docs missing createdAt are never silently omitted
+  const colRef = collection(db, 'followers');
   return onSnapshot(
-    q,
+    colRef,
     (snap) => {
-      const items = snap.docs.map((d) => mapFollowerDoc(d.id, d.data()));
+      const items = snap.docs
+        .map((d) => mapFollowerDoc(d.id, d.data()))
+        .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
       onData(items);
     },
     (error) => {
@@ -352,9 +368,10 @@ export function subscribeAdminFollowers(
 
 export async function fetchAdminFollowersOnce(): Promise<FirebaseFollowerRecord[]> {
   try {
-    const q = query(collection(db, 'followers'), orderBy('createdAt', 'desc'));
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => mapFollowerDoc(d.id, d.data()));
+    const snap = await getDocs(collection(db, 'followers'));
+    return snap.docs
+      .map((d) => mapFollowerDoc(d.id, d.data()))
+      .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
   } catch (err) {
     handleFirestoreError(err, OperationType.LIST, 'followers');
   }

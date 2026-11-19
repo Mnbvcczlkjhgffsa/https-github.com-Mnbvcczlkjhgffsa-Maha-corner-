@@ -1030,6 +1030,30 @@ export const CardCutter: React.FC = () => {
         </div>
       </div>
 
+      {/* Bulk Card Maker Cross-Promotion Banner */}
+      <div className="rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 p-4 text-white border border-indigo-400/40 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-300 flex items-center justify-center shrink-0">
+            <Layers className="w-5 h-5 text-amber-400" />
+          </div>
+          <div>
+            <h4 className="text-xs sm:text-sm font-black text-amber-300 flex items-center gap-1.5">
+              <span>{t('नवीन! एकाच वेळी अनेक (Bulk) कार्डे A4 शीटवर प्रिंट करायची आहेत का?', 'New! Need to print multiple (Bulk) cards on an A4 sheet?')}</span>
+              <span className="px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 text-[9px] font-black uppercase">NEW</span>
+            </h4>
+            <p className="text-[11px] text-slate-300">
+              {t('५, १० किंवा २० आधार, आयुष्यमान व शेतकरी कार्डे A4 शीटवर किंवा Epson ट्रेवर १-क्लिकमध्ये सेट करा.', 'Set 5, 10, or 20 cards on A4 5-card sheets or Epson PVC trays in 1-click.')}
+            </p>
+          </div>
+        </div>
+        <a
+          href="#bulk-card"
+          className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs shadow-md transition-all shrink-0 cursor-pointer"
+        >
+          {t('बल्क कार्ड प्रिंटर उघडा →', 'Open Bulk Card Maker →')}
+        </a>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Controls (7 cols) */}
         <div className="lg:col-span-7 space-y-5">
@@ -1765,10 +1789,13 @@ export const CardCutter: React.FC = () => {
                 type="button"
                 disabled={!cardReady || isProcessing}
                 onClick={handleShareCard}
-                className="py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 text-white font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                className="py-2.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] disabled:opacity-40 text-white font-black text-xs sm:text-sm transition-all hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer shadow-sm"
               >
-                <Share2 className="w-4 h-4 text-emerald-200" />
-                {t('WhatsApp वर शेअर करा', 'Share on WhatsApp')}
+                <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                  <path d="M20.1 11.7c0 4.6-3.7 8.3-8.3 8.3-1.3 0-2.5-.3-3.6-.8l-4.7 1.2 1.3-4.5c-.7-1.2-1.1-2.6-1.1-4.2 0-4.6 3.7-8.3 8.3-8.3 4.5 0 8.1 3.7 8.1 8.3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M8.3 7.9c-.3 0-.7.1-.8.5-.2.3-.7 1.1-.7 1.7s.6 1.3.7 1.5c.1.2 1.6 2.5 3.9 3.4 1.9.8 2.3.7 2.7.7.4-.1 1.3-.5 1.5-1.1.2-.5.2-1 .2-1.1 0-.1-.2-.2-.5-.4l-1.5-.7c-.3-.2-.5-.2-.7.2l-.7.8c-.2.2-.3.3-.6.1-.3-.1-1.1-.4-2-1.3-.7-.6-1.2-1.4-1.3-1.6-.1-.3 0-.4.1-.5l.5-.6c.2-.2.2-.4.3-.5.1-.2 0-.4 0-.5l-.7-1.6c-.1-.3-.3-.4-.5-.4Z" fill="white" />
+                </svg>
+                <span>{t('📲 WhatsApp वर शेअर करा', 'Share on WhatsApp')}</span>
               </button>
             </div>
 
@@ -1899,6 +1926,25 @@ export const CardCutter: React.FC = () => {
                   {t('स्पष्ट एचडी इमेज व फोटो लॅब प्रिंटिंगसाठी.', 'Lossless HD images ready for studio lab printing.')}
                 </li>
               </ul>
+            </div>
+
+            {/* Quick Affiliate Hardware Promotion for CSC operators */}
+            <div className="mt-3.5 p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 text-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5 text-center sm:text-left">
+                <span className="font-black text-amber-950 flex items-center justify-center sm:justify-start gap-1">
+                  <span>🛍️</span>
+                  <span>{t('PVC कार्ड प्रिंटिंग व लॅमिनेशन साहित्य हवे आहे का?', 'Need PVC Cards & Lamination Supplies?')}</span>
+                </span>
+                <p className="text-[11px] text-slate-600">
+                  {t('Epson PVC ट्रे, १०० कोरी PVC कार्डे व A4 लॅमिनेशन पाऊचेस थेट Amazon वरून खरेदी करा.', 'Buy Epson PVC Tray, Blank PVC Cards & Lamination pouches directly on Amazon.')}
+                </p>
+              </div>
+              <a
+                href="#store"
+                className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-sm transition-colors shrink-0"
+              >
+                {t('साहित्य व डील्स पहा →', 'View Store & Deals →')}
+              </a>
             </div>
           </div>
         </div>

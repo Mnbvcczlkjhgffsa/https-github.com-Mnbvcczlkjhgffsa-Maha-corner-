@@ -43,3 +43,38 @@ html {
 .animate-splash-bar {
   animation: splashProgress 3.1s linear forwards;
 }
+
+@keyframes mahaAdMarquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.maha-ad-marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: mahaAdMarquee 32s linear infinite;
+}
+
+@media (max-width: 640px) {
+  .maha-ad-marquee-track {
+    animation-duration: 26s;
+  }
+}
+
+.maha-ad-marquee-wrapper:hover .maha-ad-marquee-track,
+.maha-ad-marquee-wrapper:focus-within .maha-ad-marquee-track,
+.maha-ad-marquee-wrapper[data-paused="true"] .maha-ad-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .maha-ad-marquee-track {
+    animation-duration: 60s;
+  }
+}
+

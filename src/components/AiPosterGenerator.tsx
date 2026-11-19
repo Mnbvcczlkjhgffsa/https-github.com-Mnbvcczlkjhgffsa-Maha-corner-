@@ -37,7 +37,8 @@ import {
   RefreshCw,
   LogOut,
   BookmarkCheck,
-  X
+  X,
+  Crown
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { jsPDF } from 'jspdf';
@@ -1483,6 +1484,32 @@ export const AiPosterGenerator: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* VIP Premium Poster Packs Golden Highlight Banner */}
+      <div className="rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 p-4 text-slate-950 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 border border-amber-300">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-950 text-amber-400 flex items-center justify-center shrink-0 shadow-md">
+            <Crown className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-xs sm:text-sm font-black flex items-center gap-1.5">
+              <span>{t('👑 ५०+ रेडीमेड व्हीआयपी पोस्टर्स पॅक (लाडकी बहीण, PM किसान, पीक विमा, भरती)', '50+ Ready-made VIP Poster Packs (Govt Schemes, Farmer, Jobs)')}</span>
+              <span className="px-2 py-0.5 rounded-full bg-slate-950 text-amber-300 text-[10px] font-black uppercase">
+                VIP 4K
+              </span>
+            </h4>
+            <p className="text-[11px] text-slate-900 font-semibold">
+              {t('थेट 4K Ultra HD प्रिंट क्वालिटी, वॉटरमार्क नसलेले ओरिजिनल डिझाईन्स व थेट UPI पेमेंट.', 'Ultra HD 4K Print Quality, No Watermark & Direct UPI Access.')}
+            </p>
+          </div>
+        </div>
+        <a
+          href="#vip"
+          className="px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-900 text-amber-300 font-black text-xs shadow-md transition-all shrink-0 cursor-pointer"
+        >
+          {t('VIP पॅक पहा (फक्त ₹४९) →', 'View VIP Packs (From ₹49) →')}
+        </a>
+      </div>
 
       {/* Top Banner & Mode Toggle */}
       <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-blue-950 to-emerald-950 p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-amber-500/20">

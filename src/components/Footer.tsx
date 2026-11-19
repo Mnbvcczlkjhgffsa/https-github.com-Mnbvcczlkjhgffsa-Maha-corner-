@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Share2, BellRing } from 'lucide-react';
+import { ChevronRight, Share2, BellRing, ShoppingBag } from 'lucide-react';
 import { AppTab } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getPortalInviteShareUrl } from '../utils/shareConfig';
@@ -25,6 +25,7 @@ export const Footer: React.FC<FooterProps> = ({
   };
 
   const infoLinks: { tab: AppTab; labelMr: string; labelEn: string }[] = [
+    { tab: 'store', labelMr: '🛍️ CSC साहित्य स्टोअर (Amazon Deals)', labelEn: '🛍️ CSC Store & Hardware' },
     { tab: 'about', labelMr: 'माझ्याबद्दल (About Me)', labelEn: 'About Me' },
     { tab: 'privacy', labelMr: 'गोपनीयता धोरण (Privacy Policy)', labelEn: 'Privacy Policy' },
     { tab: 'terms', labelMr: 'अटी व शर्ती (Terms & Conditions)', labelEn: 'Terms & Conditions' },
@@ -58,6 +59,31 @@ export const Footer: React.FC<FooterProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 text-xs">
+            <button
+              type="button"
+              onClick={() => handleNavigate('store')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-bold transition-colors shadow-sm cursor-pointer"
+            >
+              <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
+              <span>{t('🛍️ CSC साहित्य स्टोअर', '🛍️ CSC Store')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavigate('bulk-card')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 font-bold transition-colors shadow-sm cursor-pointer"
+            >
+              <span>🗂️ {t('बल्क PVC प्रिंटर', 'Bulk PVC Maker')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavigate('vip-posters')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black transition-colors shadow-sm cursor-pointer"
+            >
+              <span>👑 {t('VIP पोस्टर्स', 'VIP Posters')}</span>
+            </button>
+
             {onOpenSubscribe && (
               <button
                 type="button"
@@ -114,6 +140,17 @@ export const Footer: React.FC<FooterProps> = ({
           </nav>
 
           <div className="pt-4 border-t border-slate-800/90 text-center space-y-1.5 text-xs">
+            <p className="text-slate-300 font-bold flex items-center justify-center gap-1.5">
+              <span>अधिकृत डोमेन:</span>
+              <a
+                href="https://mahacorner.in"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-amber-400 hover:text-amber-300 font-mono font-black underline underline-offset-2"
+              >
+                mahacorner.in
+              </a>
+            </p>
             <p className="text-slate-400">
               {t('© २०२६ महा कॉर्नर • सर्व हक्क सुरक्षित.', '© 2026 MAHA CORNER • All Rights Reserved.')}
             </p>

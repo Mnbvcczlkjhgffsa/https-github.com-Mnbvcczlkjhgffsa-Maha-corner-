@@ -335,6 +335,178 @@
         "createdAt",
         "createdAtMs"
       ]
+    },
+    "VipOrder": {
+      "title": "VipOrder",
+      "description": "VIP poster pack UPI payment record submitted by a customer/CSC operator with payer name, mobile number, UTR reference, amount, and verification status. Contains PII and is readable/updatable/deletable strictly by verified Admin.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique order ID matching document ID.",
+          "minLength": 6,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "packId": {
+          "type": "string",
+          "description": "Purchased VIP pack ID.",
+          "minLength": 2,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "packNameMr": {
+          "type": "string",
+          "description": "Marathi pack display name.",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount paid in INR."
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Full name or center name of the payer.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "customerMobile": {
+          "type": "string",
+          "description": "10-digit Indian mobile number of the payer.",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[6-9][0-9]{9}$"
+        },
+        "utrNumber": {
+          "type": "string",
+          "description": "UPI UTR or transaction reference number.",
+          "minLength": 6,
+          "maxLength": 40,
+          "pattern": "^[A-Za-z0-9\\-_]+$"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment channel (UPI or PROMO).",
+          "minLength": 2,
+          "maxLength": 20
+        },
+        "status": {
+          "type": "string",
+          "description": "Verification status (verified or pending).",
+          "minLength": 6,
+          "maxLength": 20
+        },
+        "expiresAtIso": {
+          "type": "string",
+          "description": "Optional ISO expiration string for monthly passes or empty string for lifetime.",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when order was recorded."
+        },
+        "createdAtIso": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Client/server ISO date-time string.",
+          "minLength": 10,
+          "maxLength": 40
+        },
+        "createdAtMs": {
+          "type": "number",
+          "description": "Epoch milliseconds for sorting."
+        }
+      },
+      "required": [
+        "id",
+        "packId",
+        "packNameMr",
+        "amount",
+        "customerName",
+        "customerMobile",
+        "utrNumber",
+        "paymentMethod",
+        "status",
+        "expiresAtIso",
+        "createdAt",
+        "createdAtIso",
+        "createdAtMs"
+      ]
+    },
+    "SiteAd": {
+      "title": "SiteAd",
+      "description": "Owner-uploaded popup and scrolling marquee advertisement banner displayed publicly across MAHA CORNER. Zero PII; publicly readable, strictly admin-only write/update/delete.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique advertisement document ID matching path adId.",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "description": "Advertisement popup headline.",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "description": {
+          "type": "string",
+          "description": "Advertisement promotional message.",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "marqueeText": {
+          "type": "string",
+          "description": "Optional scrolling marquee banner text override.",
+          "maxLength": 600
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Compressed raster data URL (PNG/JPEG/WEBP <= 950KB).",
+          "minLength": 20,
+          "maxLength": 950000,
+          "pattern": "^data:image/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$"
+        },
+        "linkUrl": {
+          "type": "string",
+          "description": "Optional click destination URL (https/http or empty).",
+          "maxLength": 300
+        },
+        "contactPhone": {
+          "type": "string",
+          "description": "Advertiser or portal contact phone number.",
+          "maxLength": 20
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether this advertisement is currently active."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when uploaded."
+        },
+        "createdAtMs": {
+          "type": "number",
+          "description": "Epoch milliseconds for sorting."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "marqueeText",
+        "imageUrl",
+        "linkUrl",
+        "contactPhone",
+        "active",
+        "createdAt",
+        "createdAtMs"
+      ]
     }
   },
   "firestore": {
@@ -369,6 +541,14 @@
     "/user_posters/{posterId}": {
       "schema": { "$ref": "#/entities/UserPoster" },
       "description": "User-owned saved posters in My Posters; readable, creatable, and manually deletable only by the owning authenticated user."
+    },
+    "/vip_orders/{orderId}": {
+      "schema": { "$ref": "#/entities/VipOrder" },
+      "description": "PII VIP poster UPI payment records (customerName, customerMobile, utrNumber, amount, pack). Create-only for paying visitors; get/list/update/delete strictly restricted to verified Admin."
+    },
+    "/site_ads/{adId}": {
+      "schema": { "$ref": "#/entities/SiteAd" },
+      "description": "Public zero-PII portal advertisements uploaded and managed strictly by verified Admin."
     }
   }
 }

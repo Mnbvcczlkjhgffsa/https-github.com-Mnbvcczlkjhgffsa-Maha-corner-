@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AppTab } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getPortalInviteShareUrl, getPmfbyPageOnlyInviteUrl } from '../utils/shareConfig';
+
+import { DomainStatusModal } from './DomainStatusModal';
 import {
   Scissors,
   CreditCard,
   Calculator,
+  Newspaper,
   Image as ImageIcon,
   Globe,
   Sparkles,
@@ -15,10 +17,12 @@ import {
   FileCheck2,
   Briefcase,
   Languages,
-  Share2,
   Bell,
   BellRing,
-  Check
+  Check,
+  ShoppingBag,
+  Layers,
+  Crown
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -28,6 +32,7 @@ interface HeaderProps {
   isFollowed?: boolean;
   followerCount?: number;
   onOpenUpdates?: (tab: 'updates' | 'subscribe' | 'followers-admin' | 'owner') => void;
+
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -37,8 +42,12 @@ export const Header: React.FC<HeaderProps> = ({
   isFollowed = false,
   followerCount = 0,
   onOpenUpdates,
+
 }) => {
   const { lang, setLang, t } = useLanguage();
+  const [isDomainModalOpen, setIsDomainModalOpen] = useState<boolean>(false);
+
+
 
   return (
     <header className="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 border-b border-amber-500/30 text-white shadow-xl sticky top-0 z-40 backdrop-blur-md">
@@ -65,9 +74,15 @@ export const Header: React.FC<HeaderProps> = ({
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-1.5">
                 {t('महा', 'MAHA')} <span className="text-amber-400">{t('कॉर्नर', 'CORNER')}</span>
               </h1>
-              <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full">
-                {lang === 'mr' ? 'MAHA CORNER' : 'महा कॉर्नर'}
-              </span>
+              <button
+                type="button"
+                onClick={() => setIsDomainModalOpen(true)}
+                title={t('mahacorner.in डोमेन व Google AdSense स्थिती पहा', 'View mahacorner.in Domain & AdSense Status')}
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono font-bold tracking-wide bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-full shadow-inner cursor-pointer transition-all hover:scale-105"
+              >
+                <span>mahacorner.in</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              </button>
             </div>
             <p className="text-xs text-slate-300 font-medium flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-amber-400" />
@@ -123,25 +138,7 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
 
-          <a
-            href={currentTab === 'pmfby-calc' ? getPmfbyPageOnlyInviteUrl(lang) : getPortalInviteShareUrl(lang)}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={
-              currentTab === 'pmfby-calc'
-                ? t('WhatsApp वर फक्त हे पीक विमा पेज शेअर करा', 'Share Only PMFBY Calculator Page on WhatsApp')
-                : t('WhatsApp वर पोर्टल शेअर करा', 'Share Portal on WhatsApp')
-            }
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md shadow-emerald-950/30 transition-all cursor-pointer shrink-0"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">
-              {currentTab === 'pmfby-calc'
-                ? t('हे पेज शेअर करा', 'Share This Page')
-                : t('WhatsApp शेअर', 'WhatsApp Share')}
-            </span>
-            <span className="sm:hidden">{t('शेअर', 'Share')}</span>
-          </a>
+
 
           {/* Bilingual Switcher */}
           <div
@@ -196,6 +193,37 @@ export const Header: React.FC<HeaderProps> = ({
             <span>{t('🖼️ पोस्टर मेकर (नाव व नंबर जोडा)', '🖼️ Poster Maker (Add Shop Details)')}</span>
           </button>
 
+          {/* Tab 2: Maha Corner News (Dedicated Special Live Page) */}
+          <button
+            onClick={() => onTabChange('maha-news')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black whitespace-nowrap transition-all cursor-pointer ${
+              currentTab === 'maha-news'
+                ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 text-slate-950 shadow-lg shadow-teal-500/30 scale-[1.02] ring-2 ring-emerald-300'
+                : 'text-emerald-300 hover:text-white bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40'
+            }`}
+          >
+            <Newspaper className="w-4 h-4 text-emerald-300 animate-pulse" />
+            <span>{t('📰 महा कॉर्नर न्यूज (लाईव्ह)', '📰 Maha Corner News (Live)')}</span>
+            <span className="px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 text-[9px] font-black uppercase">
+              LIVE
+            </span>
+          </button>
+
+          <button
+            onClick={() => onTabChange('vip-posters')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black whitespace-nowrap transition-all cursor-pointer ${
+              currentTab === 'vip-posters'
+                ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-400 text-slate-950 shadow-lg shadow-orange-500/30 scale-[1.02] ring-2 ring-amber-300'
+                : 'text-amber-300 hover:text-white bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/50 hover:bg-amber-500/30'
+            }`}
+          >
+            <Crown className="w-4 h-4 text-amber-400" />
+            <span>{t('👑 VIP पोस्टर्स (प्रीमियम)', '👑 VIP Posters (Premium)')}</span>
+            <span className="px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 text-[9px] font-black uppercase">
+              VIP
+            </span>
+          </button>
+
           <button
             onClick={() => onTabChange('cutter')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
@@ -206,6 +234,21 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Scissors className="w-4 h-4" />
             <span>{t('🪪 PDF कार्ड कटर (Print Sheet)', '🪪 PDF Card Cutter (Print Sheet)')}</span>
+          </button>
+
+          <button
+            onClick={() => onTabChange('bulk-card')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
+              currentTab === 'bulk-card'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md shadow-orange-500/25 scale-[1.02] ring-2 ring-amber-300'
+                : 'text-indigo-300 hover:text-white bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/40'
+            }`}
+          >
+            <Layers className="w-4 h-4 text-indigo-400" />
+            <span>{t('🗂️ बल्क PVC कार्ड प्रिंटर (Bulk)', '🗂️ Bulk PVC Card Maker')}</span>
+            <span className="px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 text-[9px] font-black uppercase">
+              NEW
+            </span>
           </button>
 
           <button
@@ -293,6 +336,19 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <button
+            onClick={() => onTabChange('store')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
+              currentTab === 'store'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md shadow-orange-500/25 scale-[1.02] ring-2 ring-amber-400'
+                : 'text-emerald-300 hover:text-white bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40'
+            }`}
+          >
+            <ShoppingBag className="w-4 h-4 text-emerald-400" />
+            <span>{t('🛍️ CSC साहित्य व टूल्स (Amazon/Flipkart)', '🛍️ CSC Store & Deals')}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+          </button>
+
+          <button
             onClick={() => onTabChange('about')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
               currentTab === 'about'
@@ -305,6 +361,11 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </nav>
       </div>
+
+      <DomainStatusModal
+        isOpen={isDomainModalOpen}
+        onClose={() => setIsDomainModalOpen(false)}
+      />
     </header>
   );
 };

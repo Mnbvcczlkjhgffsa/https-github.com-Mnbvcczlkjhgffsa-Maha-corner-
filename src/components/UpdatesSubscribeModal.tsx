@@ -175,14 +175,15 @@ export const UpdatesSubscribeModal: React.FC<UpdatesSubscribeModalProps> = ({
           text: res.message,
         });
       } else if (res.success) {
+        const savedName = subName.trim();
         setLocalIsFollowed(true);
         onFollowedChange(true, res.totalFollowers);
         confetti({ particleCount: 55, spread: 70 });
         setSubMessage({
           type: 'ok',
           text: t(
-            'तुमची फॉलो नोंदणी सुरक्षितरीत्या सेव्ह झाली आहे! धन्यवाद. ✓',
-            'Your Follow registration is safely saved! Thank you. ✓'
+            `अभिनंदन ${savedName}! तुमचे नाव व नंबर फॉलोअर यादीत सुरक्षितरीत्या सेव्ह झाले आहेत. ✓`,
+            `Thank you ${savedName}! Your name & mobile are safely saved in the followers list. ✓`
           ),
         });
         setSubName('');
@@ -675,6 +676,7 @@ export const UpdatesSubscribeModal: React.FC<UpdatesSubscribeModalProps> = ({
           {/* TAB 3: FIREBASE ADMIN FOLLOWER MANAGEMENT DASHBOARD */}
           {activeTab === 'followers-admin' && (
             <FollowersAdminDashboard
+              publicFollowerCount={followerCount}
               onFollowerCountSync={(cnt) => onFollowedChange(isFollowed, cnt)}
             />
           )}
